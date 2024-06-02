@@ -7,3 +7,8 @@ I created this script because I have a library of shell scripts that get frequen
 ```shell
 0 2 * * * python3 /home/upgrade_tool.py >> upgrade.log
 ```
+
+## Upgrade self
+```shell
+wget --no-check-certificate --no-cache --no-cookies -O upgrade_tool.py https://raw.githubusercontent.com/joeygallegos/PythonScriptUpdaterUtil/main/upgrade_tool.py
+```
