@@ -38,7 +38,7 @@ def send_email(api_key, domain, to, subject, text):
     )
 
 
-def upgrade_file(file_config, mailgun_config):
+def upgrade_file(file_config):
     filename = file_config["filename"]
     url = file_config["url"]
     paused = file_config["paused"]
@@ -101,15 +101,21 @@ def main():
     upgrades_found = False
 
     for filename, status in statuses.items():
-        if status['status'] == 'completed':
+        if status["status"] == "completed":
             upgrades_found = True
             email_body += f"Filename: {filename}\n"
             email_body += f"Status: {status['status']}\n"
             email_body += f"Reason: {status['reason']}\n\n"
 
     if upgrades_found:
-        send_email(mailgun_config['api_key'], mailgun_config['domain'], mailgun_config['email'],
-                   email_subject, email_body)
+        send_email(
+            mailgun_config["api_key"],
+            mailgun_config["domain"],
+            mailgun_config["email"],
+            email_subject,
+            email_body,
+        )
+
 
 if __name__ == "__main__":
     main()
