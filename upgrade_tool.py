@@ -1,8 +1,7 @@
 import json
 import hashlib
-import os
 import requests
-import subprocess
+import socket
 
 
 def load_config(file_path="upgrade_config.json"):
@@ -44,11 +43,14 @@ def upgrade_file(file_config, mailgun_config):
     url = file_config["url"]
     paused = file_config["paused"]
     previous_hashes = file_config["previous_hashes"]
+    status = {"status": "skipped", "reason": "Up-to-date"}
 
     print(f"Checking for upgrades on {filename}")
     if paused:
+        status["status"] = "skipped"
+        status["reason"] = "Upgrade paused"
         print(f"Upgrade paused for {filename}")
-        return False
+        return filename, status
 
     try:
         current_hash = calculate_file_hash(filename)
@@ -60,12 +62,15 @@ def upgrade_file(file_config, mailgun_config):
         remote_hash, remote_content = calculate_remote_file_hash(url)
         print("Current hash is " + remote_hash)
     except requests.RequestException as e:
+        status["status"] = "skipped"
+        status["reason"] = f"Error fetching {url}: {e}"
         print(f"Error fetching {url}: {e}")
-        return False
+        return filename, status
 
     if current_hash == remote_hash:
+        status["status"] = "skipped"
+        status["reason"] = "Up-to-date"
         print(f"{filename} is up-to-date.")
-        return False
     else:
         with open(filename, "wb") as f:
             f.write(remote_content)
@@ -73,25 +78,38 @@ def upgrade_file(file_config, mailgun_config):
         # Add current hash to old hashes
         previous_hashes.append(current_hash)
 
-        send_email(
-            mailgun_config["api_key"],
-            mailgun_config["domain"],
-            mailgun_config["email"],
-            f"File Updated: {filename}",
-            f"The file {filename} was updated to a new version.",
-        )
+        status["status"] = "completed"
+        status["reason"] = "File updated"
         print(f"{filename} updated.")
-        return True
+
+        return filename, status
 
 
 def main():
     config = load_config()
     mailgun_config = config["mailgun"]
     files_config = config["files"]
+    statuses = {}
 
     for file_config in files_config:
-        upgrade_file(file_config, mailgun_config)
+        filename, status = upgrade_file(file_config)
+        statuses[filename] = status
 
+    hostname = socket.gethostname()
+    email_subject = f"Upgrade Status on {hostname}"
+    email_body = "Upgrade status report:\n\n"
+    upgrades_found = False
+
+    for filename, status in statuses.items():
+        if status['status'] == 'completed':
+            upgrades_found = True
+            email_body += f"Filename: {filename}\n"
+            email_body += f"Status: {status['status']}\n"
+            email_body += f"Reason: {status['reason']}\n\n"
+
+    if upgrades_found:
+        send_email(mailgun_config['api_key'], mailgun_config['domain'], mailgun_config['email'],
+                   email_subject, email_body)
 
 if __name__ == "__main__":
     main()
