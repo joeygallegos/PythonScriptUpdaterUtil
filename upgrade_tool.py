@@ -60,7 +60,7 @@ def upgrade_file(file_config):
 
     try:
         remote_hash, remote_content = calculate_remote_file_hash(url)
-        print("Current hash is " + remote_hash)
+        print("Remote hash is " + remote_hash)
     except requests.RequestException as e:
         status["status"] = "skipped"
         status["reason"] = f"Error fetching {url}: {e}"
@@ -82,7 +82,7 @@ def upgrade_file(file_config):
         status["reason"] = "File updated"
         print(f"{filename} updated.")
 
-        return filename, status
+    return filename, status
 
 
 def main():
