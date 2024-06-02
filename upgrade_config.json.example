@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "filename": "/home/script.sh",
+      "url": "https://raw.githubusercontent.com/user/repo/master/script.sh",
+      "paused": false,
+      "previous_hashes": []
+    }
+  ],
+  "mailgun": {
+    "api_key": "your-mailgun-api-key",
+    "domain": "your-mailgun-domain",
+    "email": "your-notification-email@example.com"
+  }
+}
