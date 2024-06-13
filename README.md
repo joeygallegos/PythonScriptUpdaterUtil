@@ -5,7 +5,7 @@ I created this script because I have a library of shell scripts that get frequen
 
 ## Cron
 ```shell
-0 2 * * * python3 /home/upgrade_tool.py >> upgrade.log
+0 2 * * * python3 /home/upgrade_tool.py >> /home/upgrade.log
 ```
 
 ## Upgrade self
