@@ -4,6 +4,17 @@ import requests
 import socket
 import logging
 from typing import Dict, Tuple, Optional
+from urllib.parse import urlparse
+
+
+COLOR_GREEN = "\033[92m"
+COLOR_RED = "\033[91m"
+COLOR_YELLOW = "\033[93m"
+COLOR_RESET = "\033[0m"
+
+
+def colorize(text, color):
+    return f"{color}{text}{COLOR_RESET}"
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s")
@@ -49,6 +60,27 @@ def calculate_remote_file_hash(url: str) -> Tuple[str, bytes]:
     return hasher.hexdigest(), response.content
 
 
+def is_raw_github_url_missing_refs_heads(url: str) -> bool:
+    parsed_url = urlparse(url)
+    return (
+        parsed_url.netloc == "raw.githubusercontent.com"
+        and "/refs/heads/" not in parsed_url.path
+    )
+
+
+def warn_if_raw_github_url_missing_refs_heads(url: str) -> None:
+    if is_raw_github_url_missing_refs_heads(url):
+        logging.warning(
+            colorize(
+                "WARN: "
+                + url
+                + " is missing /refs/heads/; use "
+                + "https://raw.githubusercontent.com/<owner>/<repo>/refs/heads/<branch>/<file>",
+                COLOR_YELLOW,
+            )
+        )
+
+
 def send_email(api_key: str, domain: str, to: str, subject: str, text: str) -> requests.Response:
     """Send an email via Mailgun API."""
     return requests.post(
@@ -78,6 +110,8 @@ def upgrade_file(file_config: Dict) -> Tuple[str, Dict]:
         logging.info(f"Upgrade paused for {filename}")
         return filename, status
 
+    warn_if_raw_github_url_missing_refs_heads(url)
+
     current_hash = calculate_file_hash(filename)
     if current_hash:
         logging.info(f"Current hash: {current_hash}")
@@ -90,12 +124,16 @@ def upgrade_file(file_config: Dict) -> Tuple[str, Dict]:
     except requests.RequestException as e:
         status["status"] = "skipped"
         status["reason"] = f"Error fetching {url}: {e}"
-        logging.error(status["reason"])
+        logging.error(colorize(status["reason"], COLOR_YELLOW))
         return filename, status
 
     if current_hash == remote_hash:
-        logging.info(f"{filename} is up-to-date.")
+        status["status"] = "skipped"
+        status["reason"] = "Up-to-date"
+        logging.info(colorize(f"{filename} is up-to-date.", COLOR_GREEN))
     else:
+        logging.info(colorize(f"{filename} hashes differ; updating file.", COLOR_RED))
+
         with open(filename, "wb") as f:
             f.write(remote_content)
         logging.info(f"{filename} updated.")
